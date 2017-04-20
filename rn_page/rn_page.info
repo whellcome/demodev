@@ -1,0 +1,5 @@
+name = UserList
+description = List of users
+dependencies[] = drupal_test_view
+package = Other
+core = 7.x

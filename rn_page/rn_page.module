@@ -1,0 +1,45 @@
+<?php
+
+/**
+ * Implements hook_menu().
+ */
+function rn_page_menu() {
+  $items['drupal-test-task'] = array(
+    'title' => 'Users',
+    'description' => 'List of users',
+    'page callback' => 'users_page',
+    'access callback' => 'user_access',
+    'access arguments' => array('access content'),
+    'type' => MENU_NORMAL_ITEM,
+  );
+  return $items;
+}
+
+/**
+ * Page Users.
+ */
+function users_page() {
+  $rows = array();
+  $header = array(
+    array('data' => 'ID', 'field' => 'uid'),
+    array('data' => t('Name'), 'field' => 'name'),
+  );
+  $users = db_select('users', 'u')
+    ->fields('u', array('uid', 'name'))
+    ->range(0, 50)
+    ->extend('TableSort')
+    ->orderByHeader($header)
+    ->execute();
+
+  $rows = array();
+  foreach ($users as $user) {
+    $rows[] = array(
+      check_plain($user->uid),
+      check_plain($user->name),
+      l(t('Edit'), 'user/' . $user->uid . '/edit'),
+    );
+  }
+  $output = theme('table', array('header' => $header, 'rows' => $rows));
+
+  return $output;
+}
