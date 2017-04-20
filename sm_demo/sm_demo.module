@@ -1,0 +1,58 @@
+<?php
+
+/**
+ * @file
+ * Drupal test selectmenu attach module.
+ */
+
+/**
+ * Implements hook_init().
+ */
+function sm_demo_init() {
+  global $base_url;
+  global $base_path;
+  $bp = $base_url . $base_path;
+  $smpath = drupal_get_path('module', 'sm_demo');
+  drupal_add_css($smpath . '/css/jquery-ui-sm.css');
+//  drupal_add_js($bp . '/misc/drupal.js');
+//  drupal_add_js($bp . '/misc/jquery.once.js');
+  drupal_add_js('http://code.jquery.com/jquery-1.10.2.js', 'external');
+  drupal_add_js($smpath . '/js/jquery-ui-sm.js');
+//  drupal_add_js($smpath . '/js/sm-demo.js');
+}
+
+/**
+ * Implements hook_menu().
+ */
+function sm_demo_menu() {
+  $items['drupal-test-selectmenu'] = array(
+    'title' => 'Demo form',
+    'description' => 'Select menu demo form',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('sm_demo_demoform'),
+    'access callback' => 'user_access',
+    'access arguments' => array('access content'),
+    'type' => MENU_NORMAL_ITEM,
+  );
+  return $items;
+}
+
+/**
+ * Demo form.
+ */
+function sm_demo_demoform($form, &$form_state) {
+  $form['demo_select'] = array(
+    '#title' => t('Demo select'),
+    '#type' => 'select',
+    '#description' => 'Select Item',
+    '#options' => array(
+      t('--- SELECT ---'),
+      t('Item1"'),
+      t('Item2"'),
+      t('Item3"'),
+    ),
+  );
+  $smpath = drupal_get_path('module', 'sm_demo');
+  $form['#attached']['js'][] = array('data' => $smpath . '/js/sm-demo.js');
+  return $form;
+}
