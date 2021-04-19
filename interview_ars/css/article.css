@@ -1,0 +1,130 @@
+/* Megafeature new */
+
+.category-items .article-item.article-item-megafeature .p {
+    width: 435px;
+    float: none;
+}
+
+.article-item .mega-txt {
+	width: 435px;
+	height: 500px;
+	overflow: hidden;
+	color: #fff;
+    display: block;
+    position: relative;
+}
+
+.article-item .mega-txt.black {
+	color: #000;
+}
+
+.article-item .mega-txt:hover,
+.article-item .mega-txt:active {
+    color: #fff !important;
+}
+
+.article-item .mega-txt.black:hover,
+.article-item .mega-txt.black:active {
+    color: #000 !important;
+}
+
+.mega-txt .img_cont {
+	display: block;
+	width: 435px;
+	height: 500px;
+	overflow: hidden;
+	position: absolute;
+	left: 0;
+	top: 0;
+	z-index: 0;
+}
+
+.mega-txt .division,
+.mega-txt .title,
+.mega-txt .text,
+.mega-txt .inner-block-1,
+.mega-txt .inner-block-2 {
+	position: relative;
+	z-index: 5;
+	display: block;
+}
+
+.mega-txt .division {
+	 font-family: "Helvetica",Arial,sans-serif;
+	 font-size: 14px;
+	 letter-spacing: 1px;
+}	
+	
+.mega-txt-type1 .inner-block-1 {
+	padding: 280px 0 35px 50px;
+}
+
+.mega-txt-type1 .title {
+	border-top: 1px solid #fff;
+	border-bottom: 1px solid #fff;
+	padding: 5px 0;
+	text-transform: uppercase;
+	font-size: 39px;
+	line-height: 38px;
+	 font-family: "Baron";
+}
+
+.mega-txt-type1.black .title {
+	border-top: 1px solid #000;
+	border-bottom: 1px solid #000;
+}
+
+.mega-txt-type1 .text {
+	margin-top: 20px;
+	font-size: 17px;
+	line-height: 1.2em;
+}
+
+.mega-txt-type2 .inner-block-1 {
+	padding: 35px 35px 35px 50px;
+}
+
+.mega-txt-type2 .inner-block-2 {
+	padding: 210px 0 0;
+}
+
+.mega-txt-type2 .title {	
+	font-size: 50px;
+	line-height: 47px;
+	font-family: "Baron";	
+}
+
+.mega-txt-type2 .title i {
+	display: block;
+}
+
+.mega-txt-type2 .title span {
+	display: block;
+	border-bottom: 5px solid #fff;
+	text-transform: uppercase;
+}
+
+.mega-txt-type2.black .title span {
+	border-bottom: 5px solid #000;
+}
+
+.mega-txt-type2 .text {
+	margin-top: 20px;
+	font-size: 19px;
+	font-family: "Baron";	
+	text-transform: uppercase;
+	line-height: 23px;
+}
+
+.page-node-edit .mega-txt > a {
+    color: #fff !important;
+    text-decoration: none !important;
+}
+
+.page-node-edit .mega-txt.black > a {
+    color: #000 !important;
+}
+
+#edit-field-img-210x290 {
+	display: none;
+}

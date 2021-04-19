@@ -1,0 +1,713 @@
+<?php
+require_once dirname(__FILE__) . '/smartresponder.inc.php';
+
+function interview_ars_menu() {
+  $items = array();
+  $items['unsubscribe'] = array(
+    'title' => t('unsubscribe'),
+    'page callback' => 'interview_ars_unsubscribe_page',
+    //'page arguments' => array($_GET),
+    'access callback' => TRUE,
+  );
+  return $items;
+}
+
+//$tag - имя тэга, которым обрамлять заголовок если нет тогда 'div'
+//$level - 0 => морда, 1 => раздел, 2 => рубрика
+function interview_ars_title($nid, $tag = 'div', $class = '', $level = 0){
+  if(!$node = node_load($nid)){return;}
+  $class_entry = $class == '' ? '' : ' class="' . $class . '"';
+  $title = '<'.$tag.$class_entry.'>'.l($node->title,'node/'.$node->nid, array('attributes' => array('title' => $node->title))).'</'.$tag.'>';
+  $title1 = isset($node->field_title1['und'][0]['value']) ? $node->field_title1['und'][0]['value'] : FALSE; //курсив
+  $title2 = isset($node->field_title2['und'][0]['value']) ? $node->field_title2['und'][0]['value'] : ''; //title2
+  if ($title1){$title = '<'.$tag.$class_entry.'>'.l('<i>'.$title1.'</i> '.$title2,'node/'.$node->nid,array('html'=>true, 'attributes' => array('title' => $node->title))).'</'.$tag.'>';}
+  $review = isset($node->field_review['und'][0]['tid']) ? $node->field_review['und'][0]['tid'] : FALSE; //серия
+  $post_type = isset($node->field_post_type['und'][0]['tid']) ? $node->field_post_type['und'][0]['tid'] : FALSE; //рубрика
+  $section = isset($node->field_path_section['und'][0]['value']) ? interview_ars_get_tagfrompath($node->field_path_section['und'][0]['value']) : FALSE; //раздел
+  $link='';
+  $options = array('attributes' => array('class' => array('rubric-link')));
+
+  switch ($level){
+    case 0:
+      if ($review) {
+        $tagname = interview_ars_tagname($review);
+        $options['attributes']['title'] = $tagname;
+        // $link = l($tagname, interview_ars_tagpath($section).'/term/'.$review, $options);
+        $link = l($tagname, 'term/'.$review, $options);
+      }
+//    if ($review) {$link = l(interview_ars_tagname($review),'node/'.$node->nid, $options);}
+      else if ($post_type) {
+        $tagname = interview_ars_tagname($post_type);
+        $options['attributes']['title'] = $tagname;
+        $link = l($tagname,interview_ars_tagpath($section).'/'.$post_type, $options);
+      }
+      else {
+        $tagname = interview_ars_tagname($section);
+        $options['attributes']['title'] = $tagname;
+        $link = l($tagname,interview_ars_tagpath($section), $options);
+      }
+      break;
+    case 1:
+      if ($review) {
+        $tagname = interview_ars_tagname($review);
+        $options['attributes']['title'] = $tagname;
+        //$link = l($tagname,interview_ars_tagpath($section).'/term/'.$review, $options);
+        $link = l($tagname, 'term/'.$review, $options);
+      }
+//    if ($review) {$link = l(interview_ars_tagname($review),'node/'.$node->nid, $options);}
+      else if ($post_type) {
+        $tagname = interview_ars_tagname($post_type);
+        $options['attributes']['title'] = $tagname;
+        $link = l($tagname,interview_ars_tagpath($section).'/'.$post_type, $options);
+      }
+      break;
+    case 2:
+      if ($review) {
+        $tagname = interview_ars_tagname($review);
+        $options['attributes']['title'] = $tagname;
+        //$link = l($tagname,interview_ars_tagpath($section).'/term/'.$review, $options);
+        $link = l($tagname, 'term/'.$review, $options);
+      }
+//    if ($review) {$link = l(interview_ars_tagname($review),'node/'.$node->nid, $options);}
+      break;
+  }
+  return $link.$title;
+}
+
+function interview_ars_title_only($nid, $tag = 'div', $class = '') {
+  if(!$node = node_load($nid)){return;}
+  $class_entry = $class == '' ? '' : ' class="' . $class . '"';
+  $options = array('attributes' => array('title' => $node->title));
+  $title = '<'.$tag.$class_entry.'>'.l($node->title,'node/'.$node->nid, $options).'</'.$tag.'>';
+  $title1 = isset($node->field_title1['und'][0]['value']) ? $node->field_title1['und'][0]['value'] : FALSE; //курсив
+  $title2 = isset($node->field_title2['und'][0]['value']) ? $node->field_title2['und'][0]['value'] : ''; //title2
+  if ($title1){$title = '<'.$tag.$class_entry.'>'.l('<i>'.$title1.'</i> '.$title2,'node/'.$node->nid,array('html'=>true, 'attributes' => array('title' => $node->title))).'</'.$tag.'>';}
+
+  return $title;
+}
+
+function interview_ars_title_nolink($nid, $tag = 'div', $class = '', $dv = 'i') {
+  if(!$node = node_load($nid)){return;}
+  $title = _otag($tag, $class).interview_ars_first_italic($node->title)._ctag($tag);
+  $title1 = isset($node->field_title1['und'][0]['value']) ? $node->field_title1['und'][0]['value'] : FALSE; //курсив
+  $title2 = isset($node->field_title2['und'][0]['value']) ? $node->field_title2['und'][0]['value'] : ''; //title2
+  if ($title1){$title = _otag($tag, $class) . _otag($dv) . $title1 . _ctag($dv) . ' ' .$title2 . _ctag($tag);}
+  return $title;
+}
+
+//function returns title for social nets, $node is full node object
+function interview_ars_og_title($node){
+  $review = isset($node->field_review['und'][0]['tid']) ? $node->field_review['und'][0]['tid'] : FALSE; //серия
+  $post_type = isset($node->field_post_type['und'][0]['tid']) ? $node->field_post_type['und'][0]['tid'] : FALSE; //рубрика
+  $section = isset($node->field_path_section['und'][0]['value']) ? interview_ars_get_tagfrompath($node->field_path_section['und'][0]['value']) : FALSE; //раздел
+  $prefix = '';
+  if ($review) {$prefix = interview_ars_tagname($review);}
+  else if ($post_type) {$prefix = interview_ars_tagname($post_type);}
+  else {$prefix = interview_ars_tagname($section);}
+  return $prefix == '' ? $node->title : $prefix . '. ' . $node->title;
+}
+
+function interview_ars_title_link($node, $tag = '', $class = '', $dv = '') {
+  $title = _otag($tag, $class).interview_ars_first_italic($node->title)._ctag($tag);
+  $title1 = isset($node->field_title1['und'][0]['value']) ? $node->field_title1['und'][0]['value'] : FALSE; //курсив
+  $title2 = isset($node->field_title2['und'][0]['value']) ? $node->field_title2['und'][0]['value'] : ''; //title2
+  if ($title1){$title = _otag($tag, $class) . _otag($dv) . $title1 . _ctag($dv) . ' ' .$title2 . _ctag($tag);}
+  return l($title, 'node/'.$node->nid, array('html'=>TRUE,'attributes' => array('title' => $node->title)));
+}
+
+function interview_ars_title_search($node){ //$node is full node object
+  $title = '';
+  switch($node->type){
+    case 'anounce':
+      $title .= _otag('div','views-field-field-number') . interview_ars_prefix($node) . _ctag('div');
+      $title .= _otag('div','views-field-field-title') . $node->title . _ctag('div');
+    break;
+    case 'article':
+      $title .= _otag('span', 'rubric-link').interview_ars_prefix($node)._ctag('span');
+      $title .= interview_ars_title_link($node, 'div', 'popular-title', 'i');
+      break;
+    case 'event':
+    $title .= _otag('i').interview_ars_prefix($node)._ctag('i');
+    $title .= $node->title;
+    if (isset ($node->field_event_organizer['und'])){
+      $title .= ', '.$node->field_event_organizer['und'][0]['value'];
+    }
+    $title = _otag('div','popular-title').l($title,'node/'.$node->nid,array('html'=>TRUE,'attributes' => array('title' => $node->title)))._ctag('div');
+      break;
+    case 'loves':
+      $title .= _otag('span', 'rubric-link').'INTERVIEW LOVES'._ctag('span');
+    $title .= interview_ars_title_link($node, 'div', 'popular-title', 'i');
+    break;
+    default:
+    $title = l($node->title,'node/'.$node->nid, array('attributes' => array('title' => $node->title)));
+  }
+  return $title;
+}
+
+function interview_ars_prefix($node){
+  $prefix = '';
+  if ($node->type == 'article'){
+    if (isset($node->field_review['und'][0]['tid'])){
+      $prefix = interview_ars_tagname($node->field_review['und'][0]['tid']);
+    }
+    else if(isset($node->field_post_type['und'][0]['tid'])){
+      $prefix = interview_ars_tagname($node->field_post_type['und'][0]['tid']);
+    }
+    else if(isset($node->field_art12['und'][0]['tid'])){
+      $prefix = interview_ars_tagname($node->field_art12['und'][0]['tid']);
+    }
+  }
+  else if($node->type == 'event'){
+    if (isset($node->field_event_type['und'])){
+      $field = field_info_field('field_event_type');
+      $list = list_allowed_values($field);
+      //debug($list);
+      $prefix = $list[$node->field_event_type['und'][0]['value']];
+    }
+  }
+  else if($node->type == 'anounce'){
+    if (isset($node->field_number['und'])){
+      $prefix = '№'.$node->field_number['und'][0]['value'];
+    }
+  }
+  return $prefix;
+}
+
+function _otag($tag = '', $class = '') {
+  if($tag == ''){return '';}
+  $cls = $class == '' ? '' : ' class = "' . $class . '"';
+  return '<'.$tag.$cls.'>';
+}
+
+function _ctag($tag = '') {
+  if($tag == ''){return '';}
+  return '</'.$tag.'>';
+}
+
+function interview_ars_first_italic($title, $dv = 'i'){
+  $title_arr = explode(' ', $title);
+  $title_arr[0] = _otag($dv) . $title_arr[0] . _ctag($dv);
+  return implode(' ', $title_arr);
+}
+
+function interview_ars_diff_dates($date1, $date2){ //dates is timestamp
+  $date_1 = strtotime(format_date($date1, 'custom', 'Y-m-d'));
+  $date_2 = strtotime(format_date($date2, 'custom', 'Y-m-d'));
+  return (int)(($date_2-$date_1)/86400);
+}
+
+function interview_ars_styled_date($date, $specialday = FALSE, $tag = 'p', $format = 'j F l'){ //if $specialday replaces week day to today or yesterday
+  $strdate = format_date(strtotime($date), 'custom', $format);
+  $date_arr = explode(' ', $strdate);
+  $date_arr[0] = '<'.$tag.' class="date">' . $date_arr[0] . '</'.$tag.'>';
+  $date_arr[1] = '<'.$tag.' class="mounth">' . $date_arr[1] . '</'.$tag.'>';
+  $wday = $date_arr[2];
+  if ($specialday){
+    $now = time();
+    $diff = interview_ars_diff_dates(strtotime($date), $now);
+    switch ($diff){
+    case 0:
+      $wday = t('today');
+      break;
+    case 1:
+      $wday = t('yesterday');
+      break;
+    }
+  }
+  $date_arr[2] = '<'.$tag.' class="when">' . $wday . '</'.$tag.'>';
+  return implode(' ', $date_arr);
+}
+
+function interview_ars_tomorrow_date($date){
+  $now = time();
+  $diff = interview_ars_diff_dates($now,strtotime($date));
+  if ($diff < 0){
+    return format_date($now + 86400, 'custom', 'Y-m-d');
+  }
+  return $date;
+}
+
+function interview_ars_format_event_date($datetime){
+  $months = explode("|", '|января|февраля|марта|апреля|мая|июня|июля|августа|сентября|октября|ноября|декабря');
+  $days = explode("|", '|понедельник|вторник|среда|четверг|пятница|суббота|воскресенье');
+  $out  = '<div class="event-date">';
+  $out .= '<div class="event-date-day-number">';
+  $out .= '<span>' . $datetime->format('j').'</span>';
+  $out .= '</div> <br/>';
+  $out .= '<div class="event-date-months-and-day-of-week">';
+  $out .= '<span>' . $months[$datetime->format('n')] . '</span>';
+  $out .= '<span>' . $days[$datetime->format('N')] . '</span>';
+  $out .= '</div>';
+  $out .= '</div>';
+  return $out;
+}
+
+function interview_ars_rubric($nid){
+  if(!$node = node_load($nid)){return;}
+
+  $review = isset($node->field_review['und'][0]['tid']) ? $node->field_review['und'][0]['tid'] : FALSE; //серия
+  $post_type = isset($node->field_post_type['und'][0]['tid']) ? $node->field_post_type['und'][0]['tid'] : FALSE; //рубрика
+  $section = isset($node->field_path_section['und'][0]['value']) ? interview_ars_get_tagfrompath($node->field_path_section['und'][0]['value']) : FALSE; //раздел
+  $link='';
+  $options = array('attributes' => array('class' => array('rubric-link')));
+
+  $title = $review;
+  if (!$title) {
+    $title = $post_type;
+  }
+  if (!$title) {
+    $title = $section;
+  }
+
+  if ($title) {
+    $tagname = interview_ars_tagname($title);
+    $options['attributes']['title'] = $tagname;
+    if ($review) {
+      //$link = l($tagname,interview_ars_tagpath($section).'/term/'.$review, $options);
+      $link = l($tagname, 'term/'.$review, $options);
+    }
+    else if ($post_type) {$link = l($tagname,interview_ars_tagpath($section).'/'.$post_type, $options);}
+    else {$link = l($tagname,interview_ars_tagpath($section), $options);}
+  }
+  return $link;
+}
+
+function interview_ars_get_tagpath(){
+  return array(
+    24 => 'movie',
+    23 => 'fashion',
+    25 => 'art',
+    27 => 'life',
+    28 => 'beauty',
+    26 => 'music',
+    253 => 'en',
+  );
+}
+
+function interview_ars_get_tagfrompath($path){
+  $tagpath = interview_ars_get_tagpath();
+  return in_array($path, $tagpath) ? array_search($path, $tagpath) : 25;
+}
+
+function interview_ars_tagpath($tid){
+  $tagpath = interview_ars_get_tagpath();
+  return isset($tagpath[$tid]) ? $tagpath[$tid] : FALSE;
+}
+
+function interview_ars_get_tid_from_path($furl){
+  $url = parse_url($furl); //url страницы запроса
+  $url = substr($url['path'], 1);
+  $url = substr($url, -1) == '/' ? substr_replace($url, '', - 1) : $url;
+  //debug($url);
+  if ($url == '' ){return NULL;}
+  $tagpath = interview_ars_get_tagpath();
+  $tid = array_search($url,$tagpath);
+  if ($tid){return $tid;}
+  $path = drupal_lookup_path('source',$url);
+  if ($path) {$args = explode('/',$path);}
+  else{$args = explode('/',$url);}
+  //debug($args);
+  $tid = array_search($args[0],$tagpath);
+  if ($tid){return $tid;}
+  if (isset($args[2]) && $args[0]=='taxonomy' && $args[1]=='term' && is_numeric($args[2])){
+    return $args[2];
+  }
+  return NULL;
+}
+
+function interview_ars_tagname($tid){
+  $term = taxonomy_term_load($tid);
+  return $term ? $term->name : '';
+}
+
+function interview_ars_auth_signature($tid){
+  $term = taxonomy_term_load($tid);
+  $sign = isset($term->field_auth_sign['und'])?theme('image_style', array('style_name' => 'height-42', 'path' => $term->field_auth_sign['und'][0]['uri'],'attributes' => array('class' => 'signature'))):'';
+  return $term ? _otag('div', 'author') . '<i>Текст</i> ' . _otag('span', 'aname') . $term->name . _ctag('span') . $sign . _ctag('div') : '';
+}
+
+function interview_ars_isnot_festival(){
+  if (arg(0)=='node' && is_numeric(arg(1))){
+    $node=node_load(arg(1));
+    return isset($node->field_event_type['und']) && $node->field_event_type['und'][0]['value'] != 4;
+  }
+  return true;
+}
+
+function interview_ars_countrez($keys){
+  $counts = array();
+  if ($keys){
+    $query = db_select('search_index', 'i', array('target' => 'slave'))
+               ->extend('SearchQuery');
+    $query->join('node', 'n', 'n.nid = i.sid');
+    $query
+      ->condition('n.status', 1)
+      ->fields('n', array('nid', 'type'))
+      ->addTag('node_access')
+      ->searchExpression($keys, 'node');
+    $find = $query
+      ->execute()->fetchAllKeyed();
+    $results = array();
+    foreach ($find as $key=>$val) {
+      $results[$val] = isset($results[$val]) ? $results[$val]+1 : 1;
+      //++$results[$val];
+    }
+    //debug($results);
+    $types = array(
+      'article' => 'Посты',
+      'events' => 'События',
+      'loves' => 'Interview Loves',
+      'anounce' => 'Журналы',
+    );
+    $counts['all']['tname'] = 'Все';
+    $counts['all']['count'] = 0;
+    foreach ($types as $key=>$val){
+      $count = 0;
+      if (isset($results[$key])){
+        $count = $results[$key];
+        $counts['all']['count'] += $count;
+        //unset($results[$key]);
+      }
+      $counts[$key]['count'] = $count;
+      $counts[$key]['tname'] = $val;
+    }
+  }
+  //debug($counts);
+  return $counts;
+}
+
+function interview_ars_searcheads($options, $sx, $qindex, $grattr = 'intype'){
+  $counts = array(
+    'Все' => 0,
+    'Посты' => 0,
+    'События' => 0,
+    'Interview Loves' => 0,
+    'Журналы' => 0,
+  );
+  $types = array(
+    crc32('article') => 'Посты',
+    crc32('events')  => 'События',
+    crc32('loves')   => 'Interview Loves',
+    crc32('anounce') => 'Журналы',
+  );
+  $sttl = t('Search') . ' ' . $options['keys'] . (isset($options['filters']['intype']) ? ' ' . interview_ars_searchfilnm($options['filters']['intype'][0]) : '');
+  drupal_set_title($sttl);
+  $sx->SetGroupBy($grattr, SPH_GROUPBY_ATTR, $groupsort = "@group desc");
+  $sx->SetFilter('intype', array_keys($types), $exclude = FALSE);
+  $sx_rs = $sx->Query(implode(' ', array($options['keys'])), $qindex);
+  if (!isset($sx_rs['matches'])){return $counts;}
+  foreach ($sx_rs['matches'] as $mch){
+    $counts[$types[$mch['intype']]] = $mch['@count'];
+    $counts['Все'] += $mch['@count'];
+  }
+  return $counts;
+}
+
+function interview_ars_searchfilnm ($filcode){
+  $types = array(
+    crc32('article') => 'Посты',
+    crc32('events')  => 'События',
+    crc32('loves')   => 'Interview Loves',
+    crc32('anounce') => 'Журналы',
+  );
+  return isset($types[$filcode]) ? $types[$filcode] : '';
+}
+
+function interview_ars_postcover($node, $stylenm='130x130'){
+  $result=false;
+  switch($node->type){
+    case 'article':
+      $query = db_select('field_data_field_big_img', 'fli');
+      $query->fields('fli', array('field_big_img_fid'));
+      $query->condition('entity_type','node');
+      $query->condition('entity_id', $node->nid);
+      $query->range(0, 1);
+      $result = $query->execute()->fetchField();
+      break;
+    case 'loves':
+      $query = db_select('field_data_field_loves_image', 'fli');
+      $query->fields('fli', array('field_loves_image_fid'));
+      $query->condition('entity_type','node');
+      $query->condition('entity_id', $node->nid);
+      $query->range(0, 1);
+      $result = $query->execute()->fetchField();
+      break;
+    case 'events':
+      $query = db_select('field_data_field_event_poster', 'fli');
+      $query->fields('fli', array('field_event_poster_fid'));
+      $query->condition('entity_type','node');
+      $query->condition('entity_id', $node->nid);
+      $query->range(0, 1);
+      $result = $query->execute()->fetchField();
+      break;
+    case 'anounce':
+      $query = db_select('field_data_field_cover', 'fli');
+      $query->fields('fli', array('field_cover_fid'));
+      $query->condition('entity_type','node');
+      $query->condition('entity_id', $node->nid);
+      $query->range(0, 1);
+      $result = $query->execute()->fetchField();
+      break;
+    default:
+  }
+  $imglink = '';
+  if ($result) {
+    $postcover = theme(
+      'image_style',
+      array(
+        'style_name' => $stylenm,
+        'path' => file_load($result)->uri,
+        'attributes' => array('class' => 'img'),
+        'alt' => $node->title
+      )
+    );
+    $imglink = l($postcover,'node/'.$node->nid,array('html'=>TRUE));
+  }
+  //debug($postcover);
+  return $imglink;
+}
+
+function interview_ars_uyiuyi($keys){
+  $results = array();
+  if ($keys){
+    $query = db_select('search_index', 'i', array('target' => 'slave'))
+               ->extend('SearchQuery');
+    $query->join('node', 'n', 'n.nid = i.sid');
+    $query
+      ->condition('n.status', 1)
+      ->addTag('node_access')
+      ->searchExpression($keys, 'node');
+
+    $query->setOption('type', 'n.type');
+    $query->setOption('language', 'n.language');
+    if ($query->setOption('term', 'ti.tid')) {
+      $query->join('taxonomy_index', 'ti', 'n.nid = ti.nid');
+    }
+    // if (!$query->executeFirstPass()) {
+      // return array();
+    // }
+
+    $find = $query
+      ->execute();
+    
+    foreach ($find as $item) {
+      $node = node_load($item->sid);
+      
+      $results[$node->type][] = 1;
+    }
+  }
+  $types = array(
+    'article' => 'Посты',
+    'events' => 'События',
+    'loves' => 'Interview Loves',
+    'anounce' => 'Журналы',
+  );
+  $counts['all']['tname'] = 'Все';
+  $counts['all']['count'] = 0;
+  foreach ($types as $key=>$val){
+      $count = 0;
+    if (isset($results[$key])){
+      $count = count($results[$key]);
+      $counts['all']['count'] += $count;
+      //unset($results[$key]);
+    }
+    $counts[$key]['count'] = $count;
+    $counts[$key]['tname'] = $val;
+    }
+  //debug($results);
+  
+  return $counts;
+}
+
+function interview_ars_user_insert(&$edit, $account, $category){
+  $uname = $account->name;
+  $umail = $account->mail;
+
+  $sr = new SmartResponder_Api();
+
+  $result = $sr->addSubscriber(array(
+    'delivery_id' => 438212,
+    'email' => $umail,
+    'first_name' => $uname,
+  ));
+}
+
+function interview_ars_unsubscribe_page() {
+  $vars = $_GET;
+
+  if (isset($vars['email'])){
+    $sr = new SmartResponder_Api();
+
+    $params = array(
+      'search[email]' => $vars['email']
+    );
+
+    $list = $sr->subscriberList($params);
+
+    if ($list && $list['list'] && $list['list']['count']>0) {
+      $id = $list['list']['elements'][0]['id'];
+      $sr->deleteSubscriber($id);
+    }
+
+    drupal_goto('node/2441');
+  }
+  else{
+    return 'Параметры переданы неверно';
+  }
+}
+
+function interview_ars_filter_info() {
+  $filters['filter_beforeafter'] = array(
+    'title' => t('Before After'),
+    'process callback' => 'interview_ars_filter_beforeafter_process',
+    //'tips callback' => 'interview_ars_filter_beforeafter_tips',
+    //'cache' => FALSE,
+    'weight' => 0,
+  );
+  return $filters;
+}
+
+function interview_ars_filter_beforeafter_process($text = '') {
+  $text = preg_replace_callback('`<div class="before-after">(.+?)</div>`iu', '_interview_ars_get_bfaf', $text);
+  $text = preg_replace_callback('`<div class="instagram-gallery">(.+?)</div>(.+)`iu', '_interview_ars_get_instagram', $text);
+  
+  return $text;
+}
+
+function _interview_ars_get_bfaf($matches){
+  //debug($matches);
+  if (!isset($matches[1])){return '';}
+  include_once('simple_html_dom.php');
+  $html = str_get_html($matches[1]);
+  $imgs = $html->find('img');
+  $bfaf = '';
+  if (count($imgs) == 2) {
+    $bfaf .= '<div class="before-after disableSelection">';
+    foreach ($imgs as $key => $img) {
+      
+      $furi = file_build_uri(drupal_basename($img->src));
+      $path = file_create_url($furi);
+      $imfo = image_get_info(drupal_realpath($furi));
+      $bfaf .= '<div><img width="'.$imfo['width'].'" height="'.$imfo['height'].'" src="'.$path.'"/></div>';
+    }
+    $bfaf .= '</div>';
+  }
+  return $bfaf;
+}
+
+function _interview_ars_get_instagram($matches){
+  if (!isset($matches[1])){return '';}
+  $text = isset($matches[2]) ?  array_pop($matches) : '';
+  $text = preg_replace('`<div class="instagram-link">@(.+?)</div>`iu', '<div class="tag instagram-link"><a href="http://instagram.com/$1#">@$1</a></div>', $text);
+  $text = '<div class="text-block">' . $text . '</div>';
+  array_shift($matches);
+  include_once('simple_html_dom.php');
+  $inst = '';
+  foreach($matches as $match){
+    $html = str_get_html($match);
+    $imgs = $html->find('img');
+    if (count($imgs) != 0) {
+  		$inst .= '<div class="photo-block instagram-gallery">';
+      foreach ($imgs as $key => $img) {
+        $furi = file_build_uri('instagram/'.drupal_basename($img->src));
+        $path = file_create_url($furi);
+        $inst .= '<div class = "photo"><img border="0" src="'.$path.'"/></div>';
+      }
+      $inst .= '</div>';
+    }
+    else{
+      $inst .= $html;
+    }
+  }
+  return '<div class="ov-hid">' . $inst . $text . '</div>';
+}
+
+function interview_ars_filter_beforeafter_tips($filter, $format, $long = FALSE) {
+  return 'style before-after instagram-gallery';
+}
+
+function fv($mf, $mft = 'view'){
+  if ($mft == 'loves'){
+    $tag = (isset($mf['field_show_megafeature']) && $mf['field_show_megafeature'] == 1) ? 'h3' : 'span';
+    return l($mf['field_loves_image'] . interview_ars_title_nolink($mf['nid'], $tag) . 
+          '<p class="lead">' . $mf['field_loves_lead'] . '</p>','node/'.$mf['nid'],
+          array('html'=>TRUE, 'attributes' => array('title' => $mf['title'])));
+  }
+  else{
+    if ($mf['field_megafeature'] != ''){ $fmout = '<div class="p">' . $mf['field_megafeature'] . '</div>'; }
+    else{ $fmout = '<div class="p">' . ($mf['field_feature'] != '' ? $mf['field_feature'] : $mf['field_big_img']) . $mf['title'] . '</div>'; }
+    return $fmout;
+  }
+}
+
+function interview_ars_sections_view($rows){
+
+  $megafeatures = Array();
+  $features = Array();
+  foreach ($rows as $row_count => $row){
+  	$row['class'] = '';
+    if ($row['field_megafeature'] != '') {$megafeatures[] = $row;}
+    else {$features[] = $row;}
+  }
+
+  $cf = count($features);
+  $cm = count($megafeatures);
+  $k=0;
+  $fit=9;
+  $col_l = '<div class = "column-l">';
+  $col_c = '<div class = "column-c">';
+  $out='<div class="hz6">';
+  for ($i=0;$i<$cm;$i+=2){
+    $col_l .= '<div class="article-item article-item-megafeature">' . fv($megafeatures[$i]) . '</div>';
+    for ($j=$k*$fit;$j<$k*$fit+2;$j++){
+      if (isset($features[$j])){$col_c .= '<div class="article-item feature-' . $j . '">' . fv($features[$j]) . '</div>';}
+    }
+    if (isset($megafeatures[$i+1])){$col_l .= '<div class="article-item article-item-megafeature">' . fv($megafeatures[$i+1]) . '</div>';
+      for ($j=$k*$fit+2;$j<$k*$fit+3;$j++){
+        if (isset($features[$j])){$col_c .= '<div class="article-item feature-' . $j . '">' . fv($features[$j]) . '</div>';}
+      }
+    }
+    for ($l=0;$l<4;$l+=3){
+      $is_left = TRUE;
+      for ($j=$k*$fit+3+$l;$j<$k*$fit+5+$l;$j++){
+        if (isset($features[$j])){$col_l .= '<div class="article-item feature-'.$j . ' ' . ($is_left ? 'left-feature' : 'right-feature') . '">' . fv($features[$j]) . '</div>';}
+        $is_left = FALSE;
+      }
+      if (isset($features[$j])){$col_c .= '<div class="article-item feature-' . ($j) . '">' . fv($features[$j]) . '</div>';}
+    }
+    $k++;
+  }
+  for ($j=$k*$fit+1;$j<$cf;$j+=3){
+    if (isset($features[$j])){$col_l .= '<div class="article-item left-feature feature-' . $j . '">' . fv($features[$j]) . '</div>';}
+    if (isset($features[$j+1])){$col_l .= '<div class="article-item right-feature feature-' . ($j+1) . '">' . fv($features[$j+1]) . '</div>';}
+    if (isset($features[$j+2])){$col_c .= '<div class="article-item feature-' . ($j+2) . '">' . fv($features[$j+2]) . '</div>';}
+  }
+  $col_l .= '</div>'; $col_c .= '</div>';
+  $out .= $col_l . $col_c . '</div>'; //hz6
+  return $out;
+}
+
+function interview_ars_form_alter(&$form, &$form_state, $form_id) {
+  global $user;
+  if ($form_id == 'article_node_form') {
+    if(!$form['nid']['#value']){return;}
+    $filename = drupal_get_path('module', 'interview_ars').'/logs/article_edits.log';
+    $handle = fopen($filename, 'a+');
+    $content = format_date(time(), 'custom', 'Y-m-d H:m:s');
+    $content .= ' Открыта статья: nid=' . $form['nid']['#value'] . ', title=' . $form['title']['#default_value'];
+    $content .= ' Пользователь: uid=' . $user->uid . ', name=' . $user->name . ', mail=' . $user->mail;
+    $content .= ' IP: ' . $user->hostname . "\r\n";
+    fwrite($handle, $content);
+    fclose($handle);
+  }
+}
+
+function interview_ars_intaxurl($tid,$ops){
+  $intax = array(2629);
+  $tagname = interview_ars_tagname($tid);
+  $ops['attributes']['title'] = $tagname;
+  if (in_array($tid,$intax)){
+    return url('taxonomy/term/'.$tid,$ops);
+  }
+  return l($tagname, 'term/'.$tid, $ops);
+}

@@ -1,0 +1,5 @@
+core = "7.x"
+description = "Addition features for interviewrussia"
+name = "Interview Ars"
+project = "Other"
+version = "7.x-1.0"
