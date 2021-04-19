@@ -1,0 +1,4 @@
+Instruction for Perfect Money for Ubercart module for Ubercart 3
+1. Copy all the files from this directory to modules directory
+2. Enable Perfect Money for Ubercart module
+3. Configure the module

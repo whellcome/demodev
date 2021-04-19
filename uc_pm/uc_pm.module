@@ -1,0 +1,195 @@
+<?php
+/**
+ * @file
+ * Integrates Perfect Money SCI payment gateway.
+ */
+
+/**
+ * Implementation of hook_menu().
+ */
+function uc_pm_menu() {
+  $items['cart/perfectmoney/complete'] = array(
+    'title' => 'Payment complete',
+    'page callback' => 'uc_pm_complete',
+    'access callback' => 'uc_pm_completion_access',
+    'type' => MENU_CALLBACK,
+    'file' => 'uc_pm.pages.inc',
+  );
+  $items['cart/perfectmoney/failed'] = array(
+    'title' => 'Payment failed',
+    'page callback' => 'uc_pm_failed',
+    'access callback' => 'uc_pm_completion_access',
+    'type' => MENU_CALLBACK,
+    'file' => 'uc_pm.pages.inc',
+  );
+  $items['cart/perfectmoney/finalize'] = array(
+    'title' => 'Order confirmed',
+    'page callback' => 'uc_pm_finalize',
+    'access callback' => 'uc_pm_completion_access',
+    'type' => MENU_CALLBACK,
+    'file' => 'uc_pm.pages.inc',
+  );
+
+  return $items;
+}
+
+// Make sure anyone can complete their 2Checkout orders.
+function uc_pm_completion_access() {
+  return TRUE;
+}
+
+/**
+ * Implementation of hook_ucga_display().
+ */
+function uc_pm_ucga_display() {
+  // Tell UC Google Analytics to display the e-commerce JS on the custom
+  // order completion page for this module.
+  if (arg(0) == 'cart' && arg(1) == 'perfectmoney' && arg(2) == 'complete') {
+    return TRUE;
+  }
+}
+
+/**
+ * Implementation of hook_form_alter().
+ */
+function uc_pm_form_alter(&$form, &$form_state, $form_id) {
+  if ($form_id == 'uc_cart_checkout_review_form' && ($order_id = intval($_SESSION['cart_order'])) > 0) {
+    $order = uc_order_load($order_id);
+
+    if ($order->payment_method == 'perfectmoney') {
+      unset($form['actions']['submit']);
+	  //debug($form);
+      $form['#prefix'] = '<table style="display: inline; padding-top: 1em;"><tr><td>';
+      $form['#suffix'] = '</td><td>'. render(drupal_get_form('uc_pm_form', $order)) .'</td></tr></table>';
+    }
+  }
+}
+
+/**
+ * Implementation of hook_payment_method().
+ */
+function uc_pm_uc_payment_method() {
+  $path = base_path() . drupal_get_path('module', 'uc_pm');
+  $title = variable_get('uc_pm_method_title', t('Perfect Money'));
+
+  $methods[] = array(
+    'id' => 'perfectmoney',
+    'name' => t('Perfect Money'),
+    'title' => $title,
+    'review' => "Perfect Money USD account",
+    'desc' => t('Redirect to Perfect Money payment gate.'),
+    'callback' => 'uc_payment_method_perfectmoney',
+    'weight' => 3,
+    'checkout' => TRUE,
+    'no_gateway' => TRUE,
+  );
+
+  return $methods;
+}
+
+
+// Adds Perfect Money settings to the payment method settings form.
+function uc_payment_method_perfectmoney($op, &$arg1) {
+  switch ($op) {
+    case 'cart-details':
+      return;
+
+    case 'cart-process':
+      return;
+
+    case 'settings':
+      $form['uc_pm_payee_acc'] = array(
+        '#type' => 'textfield',
+        '#title' => t('Payee account number'),
+        '#description' => t('Your Perfect Money account number. For example, U5958260.'),
+        '#default_value' => variable_get('uc_pm_payee_acc', ''),
+        '#size' => 16,
+      );
+      $form['uc_pm_payee_name'] = array(
+        '#type' => 'textfield',
+        '#title' => t('Payee name'),
+        '#description' => t('Your store name (e.g. My company, Inc.).'),
+        '#default_value' => variable_get('uc_pm_payee_name', ''),
+        '#size' => 16,
+      );
+      $form['uc_pm_units'] = array(
+        '#type' => 'select',
+        '#title' => t('Payment units'),
+        '#description' => t('Your Perfect Money account units. Currency must correspond to account type you selected.'),
+        '#options' => array(
+          'USD' => t('US Dollars (USD)'),
+          'EUR' => t('Euro'),
+        ),
+        '#default_value' => variable_get('uc_pm_units', 'USD'),
+      );
+      $form['uc_pm_passphrase'] = array(
+        '#type' => 'textfield',
+        '#title' => t('Alternate Passphrase'),
+        '#description' => t('Your alternate Perfect Money account Passphrase.'),
+        '#default_value' => variable_get('uc_pm_passphrase', ''),
+        '#size' => 16,
+      );
+      $form['uc_pm_method_title'] = array(
+        '#type' => 'textfield',
+        '#title' => t('Payment method title'),
+        '#default_value' => variable_get('uc_pm_method_title', t('Perfect Money')),
+      );
+      $form['uc_pm_checkout_button'] = array(
+        '#type' => 'textfield',
+        '#title' => t('Order review submit button text'),
+        '#description' => t('Provide specific text for the submit button on the order review page.'),
+        '#default_value' => variable_get('uc_pm_checkout_button', t('Submit Order')),
+      );
+      return $form;
+  }
+}
+
+// Form to build the submission to 2Checkout.com.
+function uc_pm_form($form_id, $form_state) {
+  $order = $form_state['build_info']['args'][0];
+  $country = uc_get_country_data(array('country_id' => $order->billing_country));
+  if ($country === FALSE) {
+    $country = array(0 => array('country_iso_code_3' => 'RUS'));
+  }
+
+  $context = array(
+    'revision' => 'formatted-original',
+    'location' => '2checkout-form',
+  );
+  $options = array(
+    'sign' => FALSE,
+    'dec' => '.',
+    'thou' => FALSE,
+  );
+
+  $data = array(
+    'PAYEE_ACCOUNT' => variable_get('uc_pm_payee_acc', ''),
+    'PAYEE_NAME' => variable_get('uc_pm_payee_name', ''),
+    'PAYMENT_AMOUNT' => $order->order_total,//uc_price($order->order_total, $context, $options),
+    'PAYMENT_UNITS' => variable_get('uc_pm_units', ''),
+    'PAYMENT_ID' => $order->order_id,
+    'STATUS_URL' => url('cart/perfectmoney/finalize', array('absolute' => TRUE)),
+    'PAYMENT_URL' => url('cart/perfectmoney/complete', array('absolute' => TRUE)),
+    'PAYMENT_URL_METHOD' => 'POST',
+    'NOPAYMENT_URL' => url('cart/perfectmoney/failed', array('absolute' => TRUE)),
+    'NOPAYMENT_URL_METHOD' => 'POST',
+    'BAGGAGE_FIELDS' => 'EMAIL PHONE',
+    'EMAIL' => substr($order->primary_email, 0, 64),
+    'PHONE' => substr($order->billing_phone, 0, 16),
+    'SUGGESTED_MEMO' => t('Payment for an order at !site', array('!site' => variable_get('site_name', ''))),
+  );
+
+  $form['#action'] = 'https://perfectmoney.is/api/step1.asp';
+  $form['#method'] = 'POST';
+
+  foreach ($data as $name => $value) {
+    $form[$name] = array('#type' => 'hidden', '#value' => $value);
+  }
+
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => variable_get('uc_pm_checkout_button', t('Submit Order')),
+  );
+
+  return $form;
+}
