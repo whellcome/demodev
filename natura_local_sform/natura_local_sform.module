@@ -1,0 +1,97 @@
+<?php
+
+function natura_local_sform_localSort($a,$b){
+  $arr = array('route'=> 1,'visit' => 2,'experience' => 3);
+  return $arr[$a] - $arr[$b];
+}
+
+function natura_local_sform_get_refs($entity, $fields){
+  $out = array();
+  foreach ($fields as $type => $field){
+    $count = count($entity->get($field)->getValue());
+    if($count) {
+      $out[$type] = $count;
+    }
+  }
+  return $out;
+}
+
+function natura_local_sform_form_alter(&$form, \Drupal\Core\Form\FormStateInterface $form_state, $form_id) {
+
+  if ($form_id == 'views_exposed_form') {
+    $view_names = array('nl_search');
+    $view = $form_state->getStorage('view');
+    if(in_array($view['view']->id(), $view_names)){
+      $afields = array(
+        'activity' => 'activity',
+        'difficulty' => 'difficulty',
+        'time' => 'time',
+        'typo_serv' => 'typology_serv',
+        'typo_exp' => 'typology_exp',
+        'typo_vis' => 'typology_vis',
+      );
+      //debug($form);
+      foreach ($afields as $key => $field) {
+        if(!isset($form[$key])){
+          continue;
+        }
+        $form[$key]['enabletext'] = array(
+          '#markup' => '<span class="enable-values">' . t('Apply') . '</span>',
+          '#weight' => 77,
+        );
+        $form[$key]['#type'] = 'checkboxes';
+        $form[$key]['#theme'] = 'bef_checkboxes';
+        $form[$key]['#theme_wrappers'] = array(
+          'details' => array(
+            '#title' => t($form['#info']['filter-field_' . $field]['label']),
+            '#description' => '',
+            '#attributes' => array('class' => 'form-item'),
+            '#value' => '',
+          )
+        );
+        $form['#info']['filter-field_' . $field]['label'] = '';
+      }
+      if($view['view']->current_display == 'page_2') {
+        $form['other'] = array(
+          '#type' => 'details',
+          '#title' => t('Other'),
+          '#open' => FALSE,
+          '#attributes' => array('class' => array('edit-other')),
+        );
+        $alteredfields = array(
+          'tour' => 'tour',
+          'land' => 'land',
+          'thema' => 'thematic'
+        );
+        foreach ($alteredfields as $id => $field) {
+          $form[$id]['#type'] = 'checkboxes';
+          $form[$id]['#theme'] = 'bef_checkboxes';
+          $form['other'][$id] = $form[$id];
+          $form['other'][$id]['#title'] = $form['#info']['filter-field_' . $field]['label'];
+          unset($form[$id]);
+        }
+        $form['other']['enabletext'] = array(
+          '#markup' => '<span class="enable-values">' . t('Apply') . '</span>',
+        );
+      }
+      $form['actions']['submit']['#attributes'] = array('class' => array('nls-page2-filter-submit'));
+      if($view['view']->current_display != 'page_1') {
+        $form['resetic'] = array(
+          '#markup' => '<span class="reset-values">' . t('Clear') . '</span>',
+          '#weight' => 8,
+        );
+      }
+      $form['sort_by']['#weight'] = 9;
+      unset($form['sort_order']);
+    }
+  }
+  if($form_id == 'autocomlpete_sform'){
+    $form['form_build_id']['#access'] = FALSE;
+    $form['form_token']['#access'] = FALSE;
+    $form['form_id']['#access'] = FALSE;
+  }
+  if(strpos($form_id, 'vote_votingapi_fivestar_form')){
+    $form['#attributes']['class'][] = 'votingapi-widgets';
+    $form['#attributes']['class'][] = 'fivestar';
+  }
+}

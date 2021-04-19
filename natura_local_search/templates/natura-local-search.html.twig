@@ -1,0 +1,44 @@
+<p class="search-container-subtitle">Natura Local Search</p>
+{{ form }}
+<div id="search-container">
+    <div id="map-canvas"></div>
+    <div id="stabs" class="ui-tabs">
+        <ul>
+            <li class="nl-tab-header stabs-top-header" aria-controls="tabs-destins">{{ 'Destinations'|trans }}</li>
+            <li class="nl-tab-header stabs-top-header" aria-controls="tabs-routes">{{ 'Routes'|trans }}</li>
+            <li>
+                <details>
+                    <summary>{{ 'What else to do?'|trans }}</summary>
+                    <ul>
+                        <li class="nl-tab-header" aria-controls="tabs-visits">{{ 'Visits'|trans }}</li>
+                        <li class="nl-tab-header" aria-controls="tabs-experiences">{{ 'Experiences'|trans }}</li>
+                        <li class="nl-tab-header" aria-controls="tabs-services">{{ 'Services'|trans }}</li>
+                    </ul>
+                </details>
+            </li>
+
+        </ul>
+        <div id="tabs-destins" class="nl-search-tab-content">
+            <div class="view-container">{{ view.destins }}</div>
+        </div>
+        <div id="tabs-routes" class="nl-search-tab-content">
+            <div class="view-container">{{ view.routes }}</div>
+        </div>
+        <div id="tabs-visits" class="nl-search-tab-content">
+            <div class="view-container">{{ view.visits }}</div>
+        </div>
+        <div id="tabs-experiences" class="nl-search-tab-content">
+            <div class="view-container">{{ view.experiences }}</div>
+        </div>
+        <div id="tabs-services" class="nl-search-tab-content">
+            <div class="view-container">{{ view.services }}</div>
+        </div>
+        {#{% for key, val in view %}#}
+            {#<div id="tabs-{{ key }}" class="nl-search-tab-content">#}
+                {#<div class="map-container">{{ map[key] }}</div>#}
+                {#<div class="view-container">{{ val }}</div>#}
+            {#</div>#}
+        {#{% endfor %}#}
+
+    </div>
+</div>
