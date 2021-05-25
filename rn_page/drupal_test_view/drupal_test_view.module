@@ -1,7 +1,0 @@
-<?php
-/**
- * @file
- * Code for the drupal test view feature.
- */
-
-include_once 'drupal_test_view.features.inc';
